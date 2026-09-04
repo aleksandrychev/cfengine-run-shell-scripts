@@ -1,0 +1,52 @@
+body file control
+{
+  namespace => "run_shell_scripts";
+}
+
+bundle agent main
+# @brief Runs every script listed in "scripts", gated by "condition" and
+#   spaced out by "ifelapsed" (both apply to all scripts uniformly).
+{
+  vars:
+    "condition"
+      string => "any",
+      if => not(isvariable("condition"));
+
+    "ifelapsed"
+      string => "0",
+      if => not(isvariable("ifelapsed"));
+
+  classes:
+    "have_scripts" expression => isvariable("scripts");
+    "run" expression => "$(condition)";
+
+  commands:
+    have_scripts.run::
+      "/bin/bash"
+        args => "$(scripts)",
+        contain => run_as_root,
+        action => scheduled("$(ifelapsed)"),
+        handle => canonify("run_shell_scripts_run_$(scripts)");
+
+  reports:
+    "run-shell-scripts: no scripts configured, run 'cfbs input run-shell-scripts'"
+      if => not("have_scripts");
+}
+
+body contain run_as_root
+{
+  useshell => "false";
+  exec_owner => "root";
+  exec_timeout => "600";
+}
+
+body action scheduled(x)
+# @param x Minutes between runs (see body common ifelapsed); "0" runs every time.
+{
+  ifelapsed => "$(x)";
+}
+
+body file control
+{
+  namespace => "default";
+}

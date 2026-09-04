@@ -1,0 +1,50 @@
+{
+  "name": "run-shell-scripts",
+  "type": "module",
+  "description": "Modules for running shell/bash scripts.",
+  "provides": {
+    "run-shell-scripts": {
+      "description": "Runs one or more shell/bash scripts on every policy execution",
+      "tags": ["experimental", "management"],
+      "repo": "https://github.com/aleksandrychev/cfengine-shell-scripts-runner",
+      "by": "https://github.com/aleksandrychev",
+      "version": "1.0.0",
+      "steps": [
+        "copy policy/main.cf services/cfbs/modules/run-shell-scripts/main.cf",
+        "policy_files services/cfbs/modules/run-shell-scripts/main.cf",
+        "bundles run_shell_scripts:main",
+        "input ./input.json def.json"
+      ],
+      "input": [
+        {
+          "type": "file",
+          "variable": "scripts",
+          "namespace": "run_shell_scripts",
+          "bundle": "main",
+          "label": "Script",
+          "question": "Path to the shell/bash script to run",
+          "filetype": [".sh", ".bash"],
+          "while": "Do you want to add another script to run?"
+        },
+        {
+          "type": "string",
+          "variable": "condition",
+          "namespace": "run_shell_scripts",
+          "bundle": "main",
+          "label": "Condition",
+          "question": "Class expression for when to run the scripts",
+          "default": "any"
+        },
+        {
+          "type": "string",
+          "variable": "ifelapsed",
+          "namespace": "run_shell_scripts",
+          "bundle": "main",
+          "label": "ifelapsed",
+          "question": "Minimum number of minutes between runs of the scripts (0 = every agent execution)",
+          "default": "0"
+        }
+      ]
+    }
+  }
+}
