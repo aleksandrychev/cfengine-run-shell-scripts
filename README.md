@@ -14,12 +14,14 @@ cfbs build
 
 ## Input
 
-| Variable                              | Type             | Default | Description                                      |
-|---------------------------------------|------------------|---------|--------------------------------------------------|
-| `run_shell_scripts:main.scripts`   | file, repeatable | -       | Path to a `.sh`/`.bash` script to run.           |
-| `run_shell_scripts:main.condition` | string           | `any`   | Class expression gating whether the scripts run. |
-| `run_shell_scripts:main.ifelapsed` | string           | `0`     | Minutes between runs (`0` = every agent run).    |
+`run_shell_scripts:main.scripts` is a repeatable list; each entry describes one script:
 
-`condition` is a CFEngine [class expression](https://docs.cfengine.com/docs/lts/reference/language-concepts/classes/), e.g. `Monday`, `linux`, `!any` (never run).
+| Key         | Type   | Default | Description                                                  |
+|-------------|--------|---------|--------------------------------------------------------------|
+| `path`      | file   | -       | Path to the `.sh`/`.bash` script to run.                     |
+| `condition` | string | `any`   | Class expression gating whether this script runs.            |
+| `ifelapsed` | string | `0`     | Minutes between runs of this script (`0` = every agent run). |
 
-*Note:* `scripts` uses the `file` input type, which requires [cfbs](https://github.com/cfengine/cfbs) `5.7.0` or newer.
+`condition` is a CFEngine [class expression](https://docs.cfengine.com/docs/lts/reference/language-concepts/classes/), e.g. `Monday`, `linux`, `!any` (never run). Each script has its own `condition` and `ifelapsed`, so scripts can be scheduled independently of each other.
+
+*Note:* `scripts` uses a `list` input with a keyed `file`/`string` `subtype`, which requires [cfbs](https://github.com/cfengine/cfbs) `5.8.0` or newer.

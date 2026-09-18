@@ -15,14 +15,22 @@ fixtures="$here/fixtures"
 rm -rf "$out/projects" "$out/policies"
 mkdir -p "$out/projects" "$out/policies"
 
-# build_policy <name> <space-separated fixture script names, or ""> \
-#              <condition, or "" for the default ("any")> \
-#              <ifelapsed, or "" for the default ("0")>
+# build_policy <name> <space-separated scripts> <default condition, or "" for "any"> \
+#              <default ifelapsed, or "" for "0">
+#
+# Each entry in <scripts> is a fixture script name, optionally followed by
+# ":<condition>" and/or ":<ifelapsed>" to override the defaults for that one
+# script, e.g. "one.sh" or "two.sh:!any" or "three.sh:any:5".
 build_policy() {
-  local name="$1" scripts="$2" condition="$3" ifelapsed="$4" project="$out/projects/$1"
-  echo "Building policy set '$name' (scripts='${scripts:-none}', condition='${condition:-default}', ifelapsed='${ifelapsed:-default}')"
+  local name="$1" scripts="$2" condition="${3:-any}" ifelapsed="${4:-0}" project="$out/projects/$1"
+  echo "Building policy set '$name' (scripts='${scripts:-none}', default condition='$condition', default ifelapsed='$ifelapsed')"
   mkdir -p "$project/run-shell-scripts/policy"
   cp "$repo/policy/main.cf" "$project/run-shell-scripts/policy/main.cf"
+  # Fixture scripts are copied next to the module's input.json, the same way
+  # `cfbs input` places a file that lives outside the project.
+  for entry in $scripts; do
+    cp -p "$fixtures/${entry%%:*}" "$project/run-shell-scripts/${entry%%:*}"
+  done
   # Test-only augments for the Masterfiles Policy Framework (MPF):
   # - the package inventory needs a bootstrapped host and is unrelated to this
   #   module: disable it;
@@ -36,7 +44,7 @@ JSON
   (
     cd "$project"
     cfbs init --non-interactive >/dev/null
-    REPO="$repo" FIXTURES="$fixtures" SCRIPTS="$scripts" CONDITION="$condition" IFELAPSED="$ifelapsed" python3 - <<'PY'
+    REPO="$repo" SCRIPTS="$scripts" CONDITION="$condition" IFELAPSED="$ifelapsed" python3 - <<'PY'
 import json, os
 with open(os.path.join(os.environ["REPO"], "cfbs.json")) as f:
     module = json.load(f)["provides"]["run-shell-scripts"]
@@ -61,19 +69,25 @@ with open("cfbs.json", "w") as f:
     json.dump(project, f, indent=2)
 
 names = os.environ["SCRIPTS"].split()
-condition = os.environ["CONDITION"]
-ifelapsed = os.environ["IFELAPSED"]
-if names or condition or ifelapsed:
-    fixtures = os.environ["FIXTURES"]
+default_condition = os.environ["CONDITION"]
+default_ifelapsed = os.environ["IFELAPSED"]
+if names:
     data = []
     for element in module["input"]:
         element = dict(element)
-        if element["variable"] == "scripts" and names:
-            element["response"] = [os.path.join(fixtures, n) for n in names]
-        elif element["variable"] == "condition" and condition:
-            element["response"] = condition
-        elif element["variable"] == "ifelapsed" and ifelapsed:
-            element["response"] = ifelapsed
+        if element["variable"] == "scripts":
+            entries = []
+            for entry in names:
+                parts = entry.split(":")
+                script_name = parts[0]
+                condition = parts[1] if len(parts) > 1 and parts[1] else default_condition
+                ifelapsed = parts[2] if len(parts) > 2 and parts[2] else default_ifelapsed
+                entries.append({
+                    "path": "run-shell-scripts/" + script_name,
+                    "condition": condition,
+                    "ifelapsed": ifelapsed,
+                })
+            element["response"] = entries
         data.append(element)
     with open("run-shell-scripts/input.json", "w") as f:
         json.dump(data, f, indent=2)
@@ -90,5 +104,6 @@ build_policy single "one.sh" "" ""
 build_policy multiple "one.sh two.sh failing.sh" "" ""
 build_policy no-exec-bit "no-exec-bit.sh" "" ""
 build_policy condition-false "one.sh" "!any" ""
+build_policy mixed-conditions "one.sh two.sh:!any" "" ""
 
 echo "Policy sets built in $out/policies"

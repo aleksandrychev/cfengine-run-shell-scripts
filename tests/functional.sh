@@ -93,5 +93,13 @@ run_agent
 [ -f "$LOG_FILE" ] && fail "one.sh ran despite condition being false"
 echo "OK"
 
+echo "### 7. each script has its own condition"
+rm -f "$LOG_FILE"
+use_policy mixed-conditions
+run_agent
+[ "$(line_count "one ran")" = "1" ] || fail "one.sh (condition=any) did not run"
+[ "$(line_count "two ran")" = "0" ] || fail "two.sh (condition=!any) ran despite its condition being false"
+echo "OK"
+
 rm -f "$LOG_FILE"
 echo "ALL TESTS PASSED"

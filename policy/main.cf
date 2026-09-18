@@ -4,29 +4,39 @@ body file control
 }
 
 bundle agent main
-# @brief Runs every script listed in "scripts", gated by "condition" and
-#   spaced out by "ifelapsed" (both apply to all scripts uniformly).
+# @brief Runs each script listed in "scripts", gated by its own "condition"
+#   and spaced out by its own "ifelapsed".
 {
   vars:
-    "condition"
-      string => "any",
-      if => not(isvariable("condition"));
+    "idx" slist => getindices("scripts");
 
-    "ifelapsed"
+    "condition[$(idx)]"
+      string => "$(scripts[$(idx)][condition])",
+      if => isvariable("scripts[$(idx)][condition]");
+
+    "condition[$(idx)]"
+      string => "any",
+      unless => isvariable("scripts[$(idx)][condition]");
+
+    "ifelapsed[$(idx)]"
+      string => "$(scripts[$(idx)][ifelapsed])",
+      if => isvariable("scripts[$(idx)][ifelapsed]");
+
+    "ifelapsed[$(idx)]"
       string => "0",
-      if => not(isvariable("ifelapsed"));
+      unless => isvariable("scripts[$(idx)][ifelapsed]");
 
   classes:
     "have_scripts" expression => isvariable("scripts");
-    "run" expression => "$(condition)";
 
   commands:
-    have_scripts.run::
+    have_scripts::
       "/bin/bash"
-        args => "$(scripts)",
+        args => "$(scripts[$(idx)][path])",
         contain => run_as_root,
-        action => scheduled("$(ifelapsed)"),
-        handle => canonify("run_shell_scripts_run_$(scripts)");
+        action => scheduled("$(ifelapsed[$(idx)])"),
+        if => "$(condition[$(idx)])",
+        handle => canonify("run_shell_scripts_run_$(scripts[$(idx)][path])");
 
   reports:
     "run-shell-scripts: no scripts configured, run 'cfbs input run-shell-scripts'"

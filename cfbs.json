@@ -8,7 +8,7 @@
       "tags": ["experimental", "management"],
       "repo": "https://github.com/aleksandrychev/cfengine-shell-scripts-runner",
       "by": "https://github.com/aleksandrychev",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "steps": [
         "copy policy/main.cf services/cfbs/modules/run-shell-scripts/main.cf",
         "policy_files services/cfbs/modules/run-shell-scripts/main.cf",
@@ -17,32 +17,35 @@
       ],
       "input": [
         {
-          "type": "file",
+          "type": "list",
           "variable": "scripts",
           "namespace": "run_shell_scripts",
           "bundle": "main",
           "label": "Script",
-          "question": "Path to the shell/bash script to run",
-          "filetype": [".sh", ".bash"],
+          "subtype": [
+            {
+              "key": "path",
+              "type": "file",
+              "label": "Script",
+              "question": "Path to the shell/bash script to run",
+              "filetype": [".sh", ".bash"]
+            },
+            {
+              "key": "condition",
+              "type": "string",
+              "label": "Condition",
+              "question": "Class expression for when to run this script",
+              "default": "any"
+            },
+            {
+              "key": "ifelapsed",
+              "type": "string",
+              "label": "ifelapsed",
+              "question": "Minimum number of minutes between runs of this script (0 = every agent execution)",
+              "default": "0"
+            }
+          ],
           "while": "Do you want to add another script to run?"
-        },
-        {
-          "type": "string",
-          "variable": "condition",
-          "namespace": "run_shell_scripts",
-          "bundle": "main",
-          "label": "Condition",
-          "question": "Class expression for when to run the scripts",
-          "default": "any"
-        },
-        {
-          "type": "string",
-          "variable": "ifelapsed",
-          "namespace": "run_shell_scripts",
-          "bundle": "main",
-          "label": "ifelapsed",
-          "question": "Minimum number of minutes between runs of the scripts (0 = every agent execution)",
-          "default": "0"
         }
       ]
     }
